@@ -17,13 +17,20 @@ GEARS=['purse_seines','other_purse_seines','seiners','other_seines']
 
 def request_effort(filtered=True):
     params={'spatial-resolution':'LOW','temporal-resolution':'ENTIRE','spatial-aggregation':'false',
-      'datasets[0]':'public-global-fishing-effort:latest','date-range':f'{START},{END}', 'format':'JSON'}
-    if filtered: params['filters[0]']="geartype in ("+','.join("'"+g+"'" for g in GEARS)+")"
+      'datasets[0]':'public-global-fishing-effort:latest','date-range':f'{START},{END}', 'format':'JSON', 'group-by':'GEARTYPE'}
+    # Group by gear; classification happens locally, avoiding unsupported filter names.
     url=BASE+'?'+urllib.parse.urlencode(params)
     req=urllib.request.Request(url,data=json.dumps({'geojson':GEOMETRY}).encode(),method='POST',headers={
       'Authorization':'Bearer '+TOKEN,'Content-Type':'application/json','Accept':'application/json'})
     with urllib.request.urlopen(req,timeout=120) as r:
-        return json.load(r)
+        import zipfile, io
+        raw=r.read()
+        if raw[:2] == b'PK':
+            with zipfile.ZipFile(io.BytesIO(raw)) as z:
+                candidates=[n for n in z.namelist() if n.endswith('.json')]
+                if not candidates: raise ValueError('Archive API privo di JSON')
+                return json.loads(z.read(candidates[0]))
+        return json.loads(raw)
 
 def unpack(data):
     rows=[]
@@ -31,7 +38,7 @@ def unpack(data):
         if isinstance(obj,list):
             for i in obj:walk(i)
         elif isinstance(obj,dict):
-            if all(k in obj for k in ('lat','lon','hours')):
+            if all(k in obj for k in ('lat','lon','hours')) and str(obj.get('geartype','')).lower() in GEARS:
                 try:
                     lat,lon,hrs=float(obj['lat']),float(obj['lon']),float(obj['hours'])
                     if SOUTH<=lat<=NORTH and WEST<=lon<=EAST and hrs>0:
@@ -77,7 +84,16 @@ if __name__=='__main__':
         # Do not print server response: avoid logging any sensitive detail.
         status=f'Richiesta API non riuscita: HTTP {e.code}. Nessuna mappa aggiornata.'
         render([],status,'Nessun dato verificato')
-        print(status);sys.exit(1)
+        print(status)
+        # Show only a short, sanitized error description; never print secrets or URLs.
+        try:
+            detail=json.loads(e.read(4096).decode('utf8','replace'))
+            message='; '.join(str(x.get('title','')) + ': ' + str(x.get('detail','')) for x in detail.get('messages',[]) if isinstance(x,dict))
+            if not message: message=str(detail.get('error',''))
+            message=message.replace(TOKEN,'[REDACTED]')[:500]
+            print('Motivo server GFW:',message if message else 'non specificato')
+        except Exception: pass
+        sys.exit(1)
     except Exception as e:
         render([],'Errore nel recupero dati; nessuna rilevazione verificata','Nessun dato verificato')
         print('ERROR',type(e).__name__);sys.exit(1)
