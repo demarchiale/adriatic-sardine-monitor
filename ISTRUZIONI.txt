@@ -1,0 +1,13 @@
+MONITORAGGIO ADRIATICO - ISTRUZIONI
+1. Estrai questo ZIP sul Mac.
+2. Nel tuo repository GitHub scegli Add file > Upload files.
+3. Trascina monitor.py e la cartella .github nell'area di caricamento. Sul Mac la cartella .github è nascosta: nel Finder premi Cmd+Shift+punto per mostrarla, poi trascinala.
+   NON caricare ISTRUZIONI.txt (facoltativo) o token.
+4. Premi Commit changes.
+5. Vai su Settings > Pages e imposta Build and deployment > Source: GitHub Actions.
+6. Vai su Actions > Monitoraggio Adriatico > Run workflow > Run workflow.
+7. Apri l'esecuzione e controlla che sia verde. Se fallisce, invia screenshot dell'errore SENZA token.
+8. Dopo la pubblicazione la mappa sarà disponibile su https://demarchiale.github.io/adriatic-sardine-monitor/
+NOTE: la schedulazione GitHub Actions può avere ritardi; i dati GFW non sono real-time (circa 96h o più).
+NOTE: il progetto è un primo prototipo, non è stato testato con il tuo token.
+NOTE: nessun dato di sardine/tonni è confermato dalle mappe di attività di pesca.
